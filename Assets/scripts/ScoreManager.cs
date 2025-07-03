@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class ScoreManager : MonoBehaviour
@@ -8,6 +9,11 @@ public class ScoreManager : MonoBehaviour
     public Text highScoreDisplayText;
 
     public CarMovement carMovement;
+    public static ScoreManager Instance;
+
+    public ScoreManager scoreManager;
+
+
 
     public float baseScoreIncreaseSpeed = 30f;
     public float lerpSpeed = 5f;
@@ -37,6 +43,15 @@ public class ScoreManager : MonoBehaviour
         new Color(0.1f, 0.8f, 1f),
         new Color(0.7f, 0.2f, 1f),
     };
+
+    void Awake()
+    {
+        Instance = this;
+        // DontDestroyOnLoad kaldırıldı
+        // Sahne yüklendiğinde referans güncelleme gerekmez, çünkü her sahnede yeni instance var.
+    }
+
+
 
     void Start()
     {
@@ -152,4 +167,7 @@ public class ScoreManager : MonoBehaviour
 
         scoreText.color = newColor;
     }
+
+   
+
 }

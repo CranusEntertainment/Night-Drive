@@ -3,7 +3,8 @@ using UnityEngine;
 
 public class CitySpawner : MonoBehaviour
 {
-    public Transform player;
+    private Transform player;  // private, editörden görünmez
+
     public GameObject[] segmentPrefabs;
     public int visibleSegments = 5;
     public float segmentLength = 100f;
@@ -11,10 +12,17 @@ public class CitySpawner : MonoBehaviour
     private float spawnZ = 0f;
     private List<GameObject> spawnedSegments = new List<GameObject>();
 
-    private Vector3 spawnPos = Vector3.zero; // GC'yi azaltmak için yeniden kullanılabilir pozisyon
+    private Vector3 spawnPos = Vector3.zero;
 
     void Start()
     {
+        player = GameObject.FindGameObjectWithTag("Player")?.transform;
+
+        if (player == null)
+        {
+            Debug.LogError("Player bulunamadı! Player objesine 'Player' tag'i atanmış mı?");
+        }
+
         for (int i = 0; i < visibleSegments; i++)
         {
             SpawnSegment();
@@ -23,15 +31,23 @@ public class CitySpawner : MonoBehaviour
 
     void Update()
     {
+        if (player == null)
+        {
+            player = GameObject.FindGameObjectWithTag("Player")?.transform;
+
+            if (player == null)
+            {
+                Debug.LogWarning("Player bulunamadı, Update atlandı.");
+                return;
+            }
+        }
         float playerZ = player.position.z;
 
-        // Spawn mesafesi kontrolü (spawnZ daha geride olmalı çünkü geriye doğru gidiliyor)
         if (playerZ < spawnZ + (visibleSegments * segmentLength))
         {
             SpawnSegment();
         }
 
-        // En eski segmenti kaldır
         if (spawnedSegments.Count > 0)
         {
             GameObject firstSegment = spawnedSegments[0];
@@ -65,3 +81,4 @@ public class CitySpawner : MonoBehaviour
         spawnedSegments.RemoveAt(0);
     }
 }
+    

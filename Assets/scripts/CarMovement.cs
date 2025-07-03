@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UI; // En üstte ekle
+using UnityEngine.SceneManagement; // Sahne yönetimi için ekle
+
 
 public class CarMovement : MonoBehaviour
 {
@@ -9,6 +12,18 @@ public class CarMovement : MonoBehaviour
     public float boostedSpeed = 20f;
     public float boostLerpSpeed = 5f;
     public float currentSpeed;
+
+    [Header("Küre Toplama Ayarları")]
+    public float speedIncreasePerOrb = 1f;
+    public float maxForwardSpeed = 25f;
+
+    [Header("Hız Düşürme Ayarları")]
+    public float speedDecreaseAmount = 5f;
+    public float minForwardSpeed = 5f; // Hızın düşebileceği minimum değer
+
+    [Header("UI referans")]
+    public Text speedDisplayText;
+    public GameObject gameOverPanel;  // Buraya inspector'dan GameOverPanel'i bağlayacaksın
 
     [Header("Sağa–Sola Hareket")]
     public float sideSpeed = 5f;
@@ -39,6 +54,7 @@ public class CarMovement : MonoBehaviour
 
     private int moveDirection = 0;
     private bool isBoosting = false;
+    private bool isGameOver = false;
 
     void Start()
     {
@@ -54,6 +70,9 @@ public class CarMovement : MonoBehaviour
             if (motionBlur != null) motionBlur.intensity.value = 0f;
             if (chromaticAberration != null) chromaticAberration.intensity.value = 0f;
         }
+        // Başlangıçta GameOverPanel gizli olsun
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(false);
 
         if (engineAudioSource != null)
             engineAudioSource.Play();
@@ -62,14 +81,32 @@ public class CarMovement : MonoBehaviour
             rightBoostTrail.time = defaultTrailTime;
         if (leftBoostTrail != null)
             leftBoostTrail.time = defaultTrailTime;
+
+        Time.timeScale = 1f; // Oyun başladığında zaman akışını resetle
     }
 
     void Update()
     {
         float delta = Time.deltaTime;
-        float speedRatio = Mathf.InverseLerp(forwardSpeed, boostedSpeed, currentSpeed);
+        // Update içinde speedRatio hesaplama
+        float speedRatio = Mathf.InverseLerp(0f, maxForwardSpeed, currentSpeed);
         float targetSpeed = isBoosting ? boostedSpeed : forwardSpeed;
+
         currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, boostLerpSpeed * delta);
+
+        // Speed sıfıra inmiş mi kontrolü
+        if (currentSpeed <= 0.01f) // sıfıra çok yakınsa game over
+        {
+            currentSpeed = 0f;
+            GameOver();
+            return;
+        }
+
+
+        // Text güncellemesi
+        if (speedDisplayText != null)
+            speedDisplayText.text = "KM: " + Mathf.RoundToInt(currentSpeed).ToString();
+
 
         // Motor sesi
         if (engineAudioSource != null)
@@ -108,12 +145,54 @@ public class CarMovement : MonoBehaviour
             leftBoostTrail.time = Mathf.Lerp(leftBoostTrail.time, targetTrailTime, trailLerpSpeed * delta);
     }
 
+
+    // === Yeni Eklenen Metod ===
+    public void CollectOrb()
+    {
+        forwardSpeed += speedIncreasePerOrb;
+        boostedSpeed += speedIncreasePerOrb;
+
+        forwardSpeed = Mathf.Min(forwardSpeed, maxForwardSpeed);
+        boostedSpeed = Mathf.Min(boostedSpeed, maxForwardSpeed);
+    }
+
+    void GameOver()
+    {
+        if (isGameOver) return;
+        isGameOver = true;
+
+        Debug.Log("Oyun bitti! Hız 0'a düştü.");
+
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(true); // Game Over paneli göster
+
+        Time.timeScale = 0f; // Oyunu durdur
+    }
+
+    public void RestartLevel()
+    {
+        Time.timeScale = 1f; // Eğer oyunu durdurduysan aç
+        Scene currentScene = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(currentScene.name);
+    }
+
+
+    // Yeni: Hızı düşüren metod
+    public void ApplySlowDown()
+    {
+        forwardSpeed -= speedDecreaseAmount;
+        boostedSpeed -= speedDecreaseAmount;
+
+        forwardSpeed = Mathf.Max(forwardSpeed, 0f); // minForwardSpeed yerine 0
+        boostedSpeed = Mathf.Max(boostedSpeed, 0f);
+
+        Debug.Log("Hız düşürüldü! Yeni hız: " + forwardSpeed);
+    }
+
     // UI butonları
     public void MoveRightStart() => moveDirection = 1;
     public void MoveLeftStart() => moveDirection = -1;
     public void StopMove() => moveDirection = 0;
-
     public void StartBoost() => isBoosting = true;
-
     public void StopBoost() => isBoosting = false;
 }
